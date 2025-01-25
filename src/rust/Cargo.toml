@@ -1,0 +1,13 @@
+[package]
+name = 'rust_fun'
+version = '0.1.0'
+edition = '2021'
+
+[lib]
+crate-type = [ 'staticlib' ]
+name = 'rust_fun'
+
+[dependencies]
+extendr-api = '*'
+chrono = "0.4"
+text_distance = "0.5.0"
