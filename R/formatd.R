@@ -1,11 +1,11 @@
 #' @export
 formatd <- function(date, format = ""){
-    if(class(date) != "character"){
-        date <- as.character(date)
+    if(class(date) == "Date"){
+        date <- as.integer(date)
+        date[!is.na(date)] <- r_format_date(date[!is.na(date)], format)
+    } else if(class(date) == "character"){
+        date[!is.na(date)] <- r_format_cdate(date[!is.na(date)], format)
     }
-
-    date[!is.na(date)] <- r_format_cdate(date[!is.na(date)], format)
-
 
     return(date)
 }

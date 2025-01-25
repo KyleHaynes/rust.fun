@@ -7,7 +7,7 @@ if(F){
 
 
 # Test
-d <- (sample(c(seq(as.Date('1923/01/01'), as.Date('2023/01/01'), by="day"), rep(NA, 300)), 4E6, replace = T))
+d <- (sample(c(seq(as.Date('1923/01/01'), as.Date('2023/01/01'), by="day"), rep(NA, 300)), 1E6, replace = T))
 dc <- as.character(d)
 
 

@@ -20,9 +20,21 @@ fn r_format_cdate(date_vec: Vec<String>, date_format: String) -> Vec<String> {
     }).collect()
 }
 
+/// @export
+#[extendr]
+fn r_format_date(date_vec: Vec<i32>, date_format: String) -> Vec<String> {
+    date_vec.iter().map(|&days_since_epoch| {
+        match NaiveDate::from_num_days_from_ce_opt(days_since_epoch) {
+            Some(date) => date.format(&date_format).to_string(),
+            None => "Invalid date format".to_string(),
+        }
+    }).collect()
+}
+
 
 extendr_module! {
     mod rust_fun;
     fn hello_world;
     fn r_format_cdate;
+    fn r_format_date;
 }

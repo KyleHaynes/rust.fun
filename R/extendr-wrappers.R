@@ -17,5 +17,8 @@ hello_world <- function() .Call(wrap__hello_world)
 #' @export
 r_format_cdate <- function(date_vec, date_format) .Call(wrap__r_format_cdate, date_vec, date_format)
 
+#' @export
+r_format_date <- function(date_vec, date_format) .Call(wrap__r_format_date, date_vec, date_format)
+
 
 # nolint end
