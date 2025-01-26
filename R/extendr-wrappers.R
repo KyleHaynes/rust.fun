@@ -15,6 +15,9 @@ NULL
 hello_world <- function() .Call(wrap__hello_world)
 
 #' @export
+standardise_strings <- function(input, to_uppercase, trim_whitespace, remove_double_spaces) .Call(wrap__standardise_strings, input, to_uppercase, trim_whitespace, remove_double_spaces)
+
+#' @export
 r_format_cdate <- function(date_vec, date_format) .Call(wrap__r_format_cdate, date_vec, date_format)
 
 #' @export
