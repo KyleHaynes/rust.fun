@@ -12,7 +12,7 @@ fn hello_world() -> &'static str {
 /// @export
 #[extendr]
 fn r_format_cdate(date_vec: Vec<String>, date_format: String) -> Vec<String> {
-    date_vec.iter().map(|date_str| {
+    date_vec.par_iter().map(|date_str| {
         match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
             Ok(date) => date.format(&date_format).to_string(),
             Err(_) => "Invalid date format".to_string(),
@@ -20,12 +20,16 @@ fn r_format_cdate(date_vec: Vec<String>, date_format: String) -> Vec<String> {
     }).collect()
 }
 
+use extendr_api::prelude::*;
+use rayon::prelude::*;
+
 /// @export
+
 #[extendr]
 fn r_format_date(date_vec: Vec<i32>, date_format: String) -> Vec<String> {
     let r_epoch_offset = 719163; // Number of days from "0000-12-31" to "1970-01-01"
     
-    date_vec.iter().map(|&days_since_r_epoch| {
+    date_vec.par_iter().map(|&days_since_r_epoch| {
         let adjusted_days = days_since_r_epoch + r_epoch_offset;
         match NaiveDate::from_num_days_from_ce_opt(adjusted_days) {
             Some(date) => date.format(&date_format).to_string(),
@@ -33,6 +37,7 @@ fn r_format_date(date_vec: Vec<i32>, date_format: String) -> Vec<String> {
         }
     }).collect()
 }
+
 
 /// @export
 #[extendr]

@@ -11,3 +11,4 @@ name = 'rust_fun'
 extendr-api = '*'
 chrono = "0.4"
 text_distance = "0.5.0"
+rayon = "1.8"
