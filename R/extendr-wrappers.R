@@ -23,5 +23,14 @@ r_format_cdate <- function(date_vec, date_format) .Call(wrap__r_format_cdate, da
 #' @export
 r_format_date <- function(date_vec, date_format) .Call(wrap__r_format_date, date_vec, date_format)
 
+#' @export
+compute_damerau_levenshtein_distance <- function(strs1, strs2) .Call(wrap__compute_damerau_levenshtein_distance, strs1, strs2)
+
+compute_levenshtein_distance <- function(strs1, strs2) .Call(wrap__compute_levenshtein_distance, strs1, strs2)
+
+compute_jaro_winkler_distance <- function(strs1, strs2, winklerize) .Call(wrap__compute_jaro_winkler_distance, strs1, strs2, winklerize)
+
+compute_hamming_distance <- function(strs1, strs2) .Call(wrap__compute_hamming_distance, strs1, strs2)
+
 
 # nolint end

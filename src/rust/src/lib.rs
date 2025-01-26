@@ -47,8 +47,8 @@ pub fn standardise_strings(
     trim_whitespace: bool, 
     remove_double_spaces: bool
 ) -> Vec<String> {
-    input.into_iter().map(|s| {
-        let mut result = s.to_string();
+    input.par_iter().map(|s| {
+        let mut result = s.clone();
 
         // Convert to uppercase if required
         if to_uppercase {
@@ -70,10 +70,100 @@ pub fn standardise_strings(
 }
 
 
+use text_distance::DamerauLevenshtein;
+use text_distance::Levenshtein;
+use text_distance::JaroWinkler;
+use text_distance::Hamming;
+
+/// @export
+#[extendr]
+fn compute_damerau_levenshtein_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize> {
+    // Ensure both vectors are the same length
+    if strs1.len() != strs2.len() {
+        panic!("Input vectors must have the same length!");
+    }
+
+    strs1.iter()
+        .zip(strs2.iter()) // Pair the elements from the two vectors
+        .map(|(str1, str2)| {
+            let damerau_levenshtein = DamerauLevenshtein {
+                src: str1.to_string(),
+                tar: str2.to_string(),
+                restricted: false, // or true depending on your needs
+            };
+            damerau_levenshtein.distance() // Compute the distance for each pair
+        })
+        .collect() // Collect the results into a Vec<usize>
+}
+
+// Levenshtein distance
+#[extendr]
+fn compute_levenshtein_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize> {
+    if strs1.len() != strs2.len() {
+        panic!("Input vectors must have the same length!");
+    }
+
+    strs1.iter()
+        .zip(strs2.iter())
+        .map(|(str1, str2)| {
+            let lev = Levenshtein {
+                src: str1.to_string(),
+                tar: str2.to_string(),
+            };
+            lev.distance()
+        })
+        .collect()
+}
+
+// Jaro-Winkler distance
+#[extendr]
+fn compute_jaro_winkler_distance(strs1: Vec<String>, strs2: Vec<String>, winklerize: bool) -> Vec<f64> {
+    if strs1.len() != strs2.len() {
+        panic!("Input vectors must have the same length!");
+    }
+
+    strs1.iter()
+        .zip(strs2.iter())
+        .map(|(str1, str2)| {
+            let jaro_winkler = JaroWinkler {
+                src: str1.to_string(),
+                tar: str2.to_string(),
+                winklerize,
+            };
+            jaro_winkler.similarity()
+        })
+        .collect()
+}
+
+
+// Hamming distance
+#[extendr]
+fn compute_hamming_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize> {
+    if strs1.len() != strs2.len() {
+        panic!("Input vectors must have the same length!");
+    }
+
+    strs1.iter()
+        .zip(strs2.iter())
+        .map(|(str1, str2)| {
+            let hamming = Hamming {
+                src: str1.to_string(),
+                tar: str2.to_string(),
+            };
+            hamming.distance()
+        })
+        .collect()
+}
+
+
 extendr_module! {
     mod rust_fun;
     fn hello_world;
     fn standardise_strings;
     fn r_format_cdate;
     fn r_format_date;
+    fn compute_damerau_levenshtein_distance;
+    fn compute_levenshtein_distance;
+    fn compute_jaro_winkler_distance;
+    fn compute_hamming_distance;
 }

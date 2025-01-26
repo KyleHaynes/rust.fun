@@ -77,12 +77,10 @@ bm <- mark(
   }
 , relative = T, min_iterations = 3, check = T)
 bm
-# # A tibble: 2 × 13
 #   expression   min median `itr/sec` mem_alloc `gc/sec` n_itr  n_gc total_time
 #   <bch:expr> <dbl>  <dbl>     <dbl>     <dbl>    <dbl> <int> <dbl>   <bch:tm>
-# 1 base        2.72   2.72      1            4      NaN     3     0      9.08s
-# 2 rust        1      1         2.77         1      NaN     3     0      3.27s
-
+# 1 base        4.48   4.46      1         3.64      NaN     3     0      8.96s
+# 2 rust        1      1         4.48      1         NaN     3     0         2s
 
 
 }
