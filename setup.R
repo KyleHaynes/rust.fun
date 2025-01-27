@@ -83,4 +83,19 @@ bm
 # 2 rust        1      1         4.48      1         NaN     3     0         2s
 
 
+require(stringdist)
+s1 <- generate_random_strings(4E5)
+s2 <- generate_random_strings(4E5)
+
+bm <- mark(
+  stringdist = {
+    s <- stringdist(s1, s2, method = "jw")
+  },
+  rust = {
+    r <- compute_jaro_winkler_distance(s1, s2, T)
+  }
+, relative = T, min_iterations = 2, check = F)
+bm
+
+
 }

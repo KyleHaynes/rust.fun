@@ -122,8 +122,8 @@ fn compute_jaro_winkler_distance(strs1: Vec<String>, strs2: Vec<String>, winkler
         panic!("Input vectors must have the same length!");
     }
 
-    strs1.iter()
-        .zip(strs2.iter())
+    strs1.par_iter()
+        .zip(strs2.par_iter())  // Use parallel iterators
         .map(|(str1, str2)| {
             let jaro_winkler = JaroWinkler {
                 src: str1.to_string(),
@@ -155,6 +155,23 @@ fn compute_hamming_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize
         .collect()
 }
 
+// use text_distance::case::ratcliff_obershelp;
+
+// #[extendr]
+// fn compute_ratcliff_obershelp_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<f64> {
+//     if strs1.len() != strs2.len() {
+//         panic!("Input vectors must have the same length!");
+//     }
+
+//     let ro = ratcliff_obershelp::default();  // Create an instance of RatcliffObershelp
+
+//     strs1.par_iter()
+//         .zip(strs2.par_iter())
+//         .map(|(str1, str2)| {
+//             ro.similarity(str1, str2) as f64  // Convert result to f64 for R compatibility
+//         })
+//         .collect()
+// }
 
 extendr_module! {
     mod rust_fun;
@@ -166,4 +183,5 @@ extendr_module! {
     fn compute_levenshtein_distance;
     fn compute_jaro_winkler_distance;
     fn compute_hamming_distance;
+    // fn compute_ratcliff_obershelp_distance;
 }
