@@ -32,5 +32,10 @@ compute_jaro_winkler_distance <- function(strs1, strs2, winklerize) .Call(wrap__
 
 compute_hamming_distance <- function(strs1, strs2) .Call(wrap__compute_hamming_distance, strs1, strs2)
 
+#' @export
+match_vector <- function(pattern, strings) .Call(wrap__match_vector, pattern, strings)
+
+list_files <- function(dir) .Call(wrap__list_files, dir)
+
 
 # nolint end

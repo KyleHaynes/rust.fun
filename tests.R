@@ -98,4 +98,36 @@ bm <- mark(
 bm
 
 
+### grepl test
+library(bench)
+library(data.table)
+set.seed(123)  # For reproducibility
+random_strings <- generate_random_strings(1E7)
+bm <- mark(
+  grepl = {
+    s <- grepl("\\d{1,3}", random_strings)
+  },
+  greplp = {
+    s <- grepl("\\d{1,3}", random_strings, perl = TRUE)
+  },
+  rust = {
+    r <- match_vector("\\d{1,3}", random_strings)
+  }
+, relative = T, min_iterations = 2, check = F)
+bm
+# Rust = slower
+
+normalizePath
+
+# list files
+system.time(y <- list.files("C:\\r_library44", all.files = T, full.names = T, recursive = T))
+system.time(z <- list_files("C:\\r_library44"))
+y <- (normalizePath(y, mustWork = F))
+z <- (normalizePath(z, mustWork = F))
+length(y)
+length(z)
+
+
+install.packages("rust.fun.zip", repos = NULL)
+
 }

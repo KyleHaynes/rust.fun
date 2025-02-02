@@ -3,6 +3,7 @@
 export(compute_damerau_levenshtein_distance)
 export(formatd)
 export(hello_world)
+export(match_vector)
 export(r_format_cdate)
 export(r_format_date)
 export(standardise_strings)

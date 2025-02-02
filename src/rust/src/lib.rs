@@ -173,6 +173,50 @@ fn compute_hamming_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize
 //         .collect()
 // }
 
+
+use regex::Regex;
+use std::sync::Arc;
+use std::thread;
+
+/// @export
+#[extendr]
+fn match_vector(pattern: &str, strings: Vec<String>) -> Vec<bool> {
+    // Compile the regex pattern
+    let re = match Regex::new(pattern) {
+        Ok(regex) => regex,
+        Err(_) => return vec![false; strings.len()], // Return false for all if regex pattern is invalid
+    };
+
+    // Use rayon for parallel processing
+    strings.par_iter()
+        .map(|s| re.is_match(s))
+        .collect()
+}
+
+use walkdir::{WalkDir, DirEntry};
+use std::fs::Metadata;
+use std::io;
+
+fn is_file(entry: &DirEntry) -> bool {
+    match entry.metadata() {
+        Ok(metadata) => metadata.is_file(), // Check if it's a regular file
+        Err(_) => {
+            println!("Failed to get metadata for file: {}", entry.path().display()); // Print the file name
+            false // Return false if metadata fetch fails
+        }
+    }
+}
+
+#[extendr]
+fn list_files(dir: &str) -> Vec<String> {
+    WalkDir::new(dir)
+        .follow_links(true) // Follow symbolic links
+        .into_iter()
+        .filter_map(|entry| entry.ok()) // Skip errors while iterating
+        .filter(|entry| is_file(entry)) // Ensure we only get regular files
+        .map(|entry| entry.path().display().to_string())
+        .collect()
+}
 extendr_module! {
     mod rust_fun;
     fn hello_world;
@@ -183,5 +227,7 @@ extendr_module! {
     fn compute_levenshtein_distance;
     fn compute_jaro_winkler_distance;
     fn compute_hamming_distance;
+    fn match_vector;
+    fn list_files;
     // fn compute_ratcliff_obershelp_distance;
 }
