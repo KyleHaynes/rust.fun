@@ -131,3 +131,6 @@ length(z)
 install.packages("rust.fun.zip", repos = NULL)
 
 }
+
+
+(40000000*.04)*.666

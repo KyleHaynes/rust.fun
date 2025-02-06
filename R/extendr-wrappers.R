@@ -37,5 +37,12 @@ match_vector <- function(pattern, strings) .Call(wrap__match_vector, pattern, st
 
 list_files <- function(dir) .Call(wrap__list_files, dir)
 
+obj_memory_size <- function(obj) .Call(wrap__obj_memory_size, obj)
+
+obj_size <- function(obj) .Call(wrap__obj_size, obj)
+
+#' Load a GeoJSON file and find which polygon each lat-long point falls into.
+assign_points_to_polygons <- function(geojson_path, lat, lon) .Call(wrap__assign_points_to_polygons, geojson_path, lat, lon)
+
 
 # nolint end

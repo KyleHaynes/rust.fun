@@ -20,7 +20,7 @@ fn r_format_cdate(date_vec: Vec<String>, date_format: String) -> Vec<String> {
     }).collect()
 }
 
-use extendr_api::prelude::*;
+
 use rayon::prelude::*;
 
 /// @export
@@ -217,6 +217,54 @@ fn list_files(dir: &str) -> Vec<String> {
         .map(|entry| entry.path().display().to_string())
         .collect()
 }
+
+
+#[extendr]
+fn obj_size(obj: Robj) -> usize {
+    obj.len() // This works for simple types like vectors but not for complex objects
+}
+
+#[extendr]
+fn obj_memory_size(obj: Robj) -> Robj {
+    // Call R's object.size() function properly
+    R!("object.size(obj)", obj).unwrap()
+}
+
+use extendr_api::prelude::*;
+use geo::{point, prelude::*, Polygon};
+use geojson::{FeatureCollection, GeoJson};
+use std::fs;
+
+/// Load a GeoJSON file and find which polygon each lat-long point falls into.
+#[extendr]
+fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -> Vec<i32> {
+    // Step 1: Read GeoJSON file
+    let geojson_str = fs::read_to_string(geojson_path).expect("Failed to read file");
+    let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
+
+    // Step 2: Extract polygons
+    let polygons: Vec<Polygon<f64>> = if let GeoJson::FeatureCollection(FeatureCollection { features, .. }) = geojson {
+        features
+            .iter()
+            .filter_map(|feature| feature.geometry.as_ref())
+            .filter_map(|geometry| geo::Geometry::try_from(geometry).ok())
+            .filter_map(|geometry| if let geo::Geometry::Polygon(p) = geometry { Some(p) } else { None })
+            .collect()
+    } else {
+        panic!("Invalid GeoJSON format");
+    };
+
+    // Step 3: Check each point and find which polygon it belongs to
+    lat.iter().zip(lon.iter()).map(|(&latitude, &longitude)| {
+        let pt = point!(x: longitude, y: latitude); // Note: GeoJSON uses (lon, lat)
+        polygons.iter().enumerate()
+            .find(|(_, poly)| poly.contains(&pt))
+            .map(|(index, _)| index as i32)  // Return polygon index
+            .unwrap_or(-1) // -1 if no match found
+    }).collect()
+}
+
+
 extendr_module! {
     mod rust_fun;
     fn hello_world;
@@ -229,5 +277,8 @@ extendr_module! {
     fn compute_hamming_distance;
     fn match_vector;
     fn list_files;
+    fn obj_memory_size;
+    fn obj_size;
+    fn assign_points_to_polygons;
     // fn compute_ratcliff_obershelp_distance;
 }
