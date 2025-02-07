@@ -1,11 +1,29 @@
 
+rextendr::document()
+geojson_file <- "C:/Users/kyleh/GitHub/rust.fun/meuse.geojson"  # Convert your shapefile to GeoJSON
+# geojson_file <- "c:/temp/suburb-10-nsw.geojson"  # Convert your shapefile to GeoJSON
+generate_lat_long <- function(n = 100) {
+  # Define latitude and longitude bounds roughly covering Australia
+  lat_min <- -44.0  # Southernmost point (Tasmania)
+  lat_max <- -10.0  # Northernmost point (Top End)
+  lon_min <- 112.0  # Westernmost point
+  lon_max <- 154.0  # Easternmost point
 
-geojson_file <- "C:/Users/kyleh/GitHub/rust.fun/df_hex.geojson"  # Convert your shapefile to GeoJSON
-latitudes <- c(-33.8688, -33.8788, -27.4698)  # Example latitudes
-longitudes <- c(151.2093, 151.2022, 153.0251) # Example longitudes
+  # Generate random latitudes and longitudes
+  lat <- runif(n, lat_min, lat_max)
+  lon <- runif(n, lon_min, lon_max)
+
+  # Return as a data frame
+  data.frame(lat = lat, lon = lon)
+}
+
+# Example: Generate 10 random points
+set.seed(42)  # For reproducibility
+d = generate_lat_long(1E5)
+
 
 # Assign points to polygons
-polygon_indices <- assign_points_to_polygons(geojson_file, latitudes, longitudes)
+system.time(x <- assign_points_to_polygons(geojson_file, d$lat, d$lon))
 
 # Print results
 print(polygon_indices)
@@ -36,9 +54,16 @@ print("GeoJSON with custom CRS saved.")
 
 
 library(sf)
-library(geojsonsf)
-
 nc <- read_sf("C:\\SA2_2021_AUST_SHP_GDA2020\\SA2_2021_AUST_GDA2020.shp")
+meuse_sf = st_as_sf(nc, coords = c("x", "y"), crs = 28992, agr = "constant")
+st_write(nc, "meuse.geojson")
+
+
+data(meuse)
+coordinates(meuse) = c("x", "y")
+class(meuse)
+# [1] "SpatialPointsDataFrame"
+writeOGR(meuse, "test_geojson", layer="meuse", driver="GeoJSON")
 
 nc <- nc %>% st_transform(4326)
 
