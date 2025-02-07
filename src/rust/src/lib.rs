@@ -321,11 +321,15 @@ fn assign_points_to_polygons(
     Ok(result)
 }
 
+
+
 #[extendr]
-fn generate_random_lat_longs(geojson_path: &str, n: usize) -> Robj {
+fn generate_random_lat_longs(geojson_path: &str, n: usize, property_name: &str, pattern: &str) -> Robj {
     // Read the GeoJSON file
     let geojson_str = fs::read_to_string(geojson_path).expect("Failed to read file");
     let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
+
+    let regex = Regex::new(pattern).expect("Invalid regex pattern");
 
     let mut min_lat = std::f64::MAX;
     let mut max_lat = std::f64::MIN;
@@ -334,6 +338,18 @@ fn generate_random_lat_longs(geojson_path: &str, n: usize) -> Robj {
 
     if let GeoJson::FeatureCollection(FeatureCollection { features, .. }) = geojson {
         for feature in features {
+            // Check if the property exists and matches the regex pattern
+            if let Some(properties) = &feature.properties {
+                if let Some(prop_value) = properties.get(property_name) {
+                    if let Some(prop_str) = prop_value.as_str() {
+                        if !regex.is_match(prop_str) {
+                            continue; // Skip features that do not match
+                        }
+                    }
+                }
+            }
+
+            // Extract bounding box
             if let Some(geometry) = feature.geometry {
                 if let Ok(geo) = Geometry::try_from(&geometry) {
                     if let Some(bbox) = geo.bounding_rect() {

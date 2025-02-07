@@ -80,5 +80,26 @@ st_write(nc, "qld.geojson")
 
 
 # ---- Sample random lat longs in a geojson file ----
-qld <- generate_random_lat_longs(geojson_file, 3E4)
-system.time(x <- assign_points_to_polygons(geojson_file, qld$lat, qld$lon, property_name = "SA2_NAME21"), gcFirst = F)
+system.time({in_qld <- generate_random_lat_longs(
+    geojson_file,
+    n = 1E3,
+    property_name = "SA2_CODE21", 
+    pattern = "^3")},
+gcFirst = F)
+
+# install.packages("leaflet")
+library(leaflet)
+
+leaflet(in_qld) %>%
+  addTiles() %>%  # Add the default OpenStreetMap tiles
+  addCircleMarkers(
+    in_qld$lon, in_qld$lat,
+    color = "red",
+    radius = 5,
+    fillOpacity = 0.8,
+    popup = ~paste("Lat:", lat, "<br>Lon:", lon)  # Show lat/lon on click
+  )
+
+
+system.time(x <- assign_points_to_polygons(geojson_file, in_qld$lat, in_qld$lon, property_name = "SA2_NAME21"), gcFirst = F)
+# Extracted 1680 polygons from GeoJSON.
