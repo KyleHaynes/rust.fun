@@ -10,10 +10,6 @@
 #' @useDynLib rust.fun, .registration = TRUE
 NULL
 
-#' Return string `"Hello world!"` to R.
-#' @export
-hello_world <- function() .Call(wrap__hello_world)
-
 #' @export
 standardise_strings <- function(input, to_uppercase, trim_whitespace, remove_double_spaces) .Call(wrap__standardise_strings, input, to_uppercase, trim_whitespace, remove_double_spaces)
 
@@ -44,6 +40,8 @@ obj_size <- function(obj) .Call(wrap__obj_size, obj)
 #' Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
 #' Returns the value of the specified property (e.g., "SA2_NAME21") for the matching polygon.
 assign_points_to_polygons <- function(geojson_path, lat, lon, property_name) .Call(wrap__assign_points_to_polygons, geojson_path, lat, lon, property_name)
+
+generate_random_lat_longs <- function(geojson_path, n) .Call(wrap__generate_random_lat_longs, geojson_path, n)
 
 
 # nolint end

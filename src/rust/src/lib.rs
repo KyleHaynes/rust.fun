@@ -1,12 +1,27 @@
 use extendr_api::prelude::*;
+use rayon::prelude::*;
 use chrono::NaiveDate;
 
-/// Return string `"Hello world!"` to R.
-/// @export
-#[extendr]
-fn hello_world() -> &'static str {
-    "Hello world!"
-}
+use text_distance::DamerauLevenshtein;
+use text_distance::Levenshtein;
+use text_distance::JaroWinkler;
+use text_distance::Hamming;
+
+use regex::Regex;
+use std::sync::Arc;
+use std::thread;
+
+use walkdir::{WalkDir, DirEntry};
+use std::fs::Metadata;
+use std::io;
+
+use geo::{point, Polygon, MultiPolygon, Contains, BoundingRect, Geometry, Rect}; // Import the Contains trait
+use geojson::{FeatureCollection, GeoJson};
+use std::fs;
+use serde_json::Value; // Import serde_json::Value for JSON value handling
+
+use rand::Rng;
+
 
 
 /// @export
@@ -21,7 +36,6 @@ fn r_format_cdate(date_vec: Vec<String>, date_format: String) -> Vec<String> {
 }
 
 
-use rayon::prelude::*;
 
 /// @export
 
@@ -70,10 +84,6 @@ pub fn standardise_strings(
 }
 
 
-use text_distance::DamerauLevenshtein;
-use text_distance::Levenshtein;
-use text_distance::JaroWinkler;
-use text_distance::Hamming;
 
 /// @export
 #[extendr]
@@ -174,10 +184,6 @@ fn compute_hamming_distance(strs1: Vec<String>, strs2: Vec<String>) -> Vec<usize
 // }
 
 
-use regex::Regex;
-use std::sync::Arc;
-use std::thread;
-
 /// @export
 #[extendr]
 fn match_vector(pattern: &str, strings: Vec<String>) -> Vec<bool> {
@@ -193,9 +199,6 @@ fn match_vector(pattern: &str, strings: Vec<String>) -> Vec<bool> {
         .collect()
 }
 
-use walkdir::{WalkDir, DirEntry};
-use std::fs::Metadata;
-use std::io;
 
 fn is_file(entry: &DirEntry) -> bool {
     match entry.metadata() {
@@ -229,12 +232,6 @@ fn obj_memory_size(obj: Robj) -> Robj {
     // Call R's object.size() function properly
     R!("object.size(obj)", obj).unwrap()
 }
-use extendr_api::prelude::*;
-use geo::{point, Polygon, MultiPolygon, Contains}; // Import the Contains trait
-use geojson::{FeatureCollection, GeoJson};
-use rayon::prelude::*;
-use std::fs;
-use serde_json::Value; // Import serde_json::Value for JSON value handling
 
 /// Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
 /// Returns the value of the specified property (e.g., "SA2_NAME21") for the matching polygon.
@@ -324,9 +321,47 @@ fn assign_points_to_polygons(
     Ok(result)
 }
 
+#[extendr]
+fn generate_random_lat_longs(geojson_path: &str, n: usize) -> Robj {
+    // Read the GeoJSON file
+    let geojson_str = fs::read_to_string(geojson_path).expect("Failed to read file");
+    let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
+
+    let mut min_lat = std::f64::MAX;
+    let mut max_lat = std::f64::MIN;
+    let mut min_lon = std::f64::MAX;
+    let mut max_lon = std::f64::MIN;
+
+    if let GeoJson::FeatureCollection(FeatureCollection { features, .. }) = geojson {
+        for feature in features {
+            if let Some(geometry) = feature.geometry {
+                if let Ok(geo) = Geometry::try_from(&geometry) {
+                    if let Some(bbox) = geo.bounding_rect() {
+                        min_lat = min_lat.min(bbox.min().y);
+                        max_lat = max_lat.max(bbox.max().y);
+                        min_lon = min_lon.min(bbox.min().x);
+                        max_lon = max_lon.max(bbox.max().x);
+                    }
+                }
+            }
+        }
+    }
+
+    let mut rng = rand::thread_rng();
+    let latitudes: Vec<f64> = (0..n).map(|_| rng.gen_range(min_lat..max_lat)).collect();
+    let longitudes: Vec<f64> = (0..n).map(|_| rng.gen_range(min_lon..max_lon)).collect();
+
+    // Return as an R list
+    list!(
+        lat = latitudes,
+        lon = longitudes
+    )
+    .into()
+}
+
+
 extendr_module! {
     mod rust_fun;
-    fn hello_world;
     fn standardise_strings;
     fn r_format_cdate;
     fn r_format_date;
@@ -339,5 +374,6 @@ extendr_module! {
     fn obj_memory_size;
     fn obj_size;
     fn assign_points_to_polygons;
+    fn generate_random_lat_longs;
     // fn compute_ratcliff_obershelp_distance;
 }
