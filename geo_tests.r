@@ -1,5 +1,6 @@
 
 rextendr::document()
+
 geojson_file <- "C:/Users/kyleh/GitHub/rust.fun/meuse.geojson"  # Convert your shapefile to GeoJSON
 # geojson_file <- "c:/temp/suburb-10-nsw.geojson"  # Convert your shapefile to GeoJSON
 generate_lat_long <- function(n = 100) {
@@ -19,14 +20,14 @@ generate_lat_long <- function(n = 100) {
 
 # Example: Generate 10 random points
 set.seed(42)  # For reproducibility
-d = generate_lat_long(1E5)
+d = generate_lat_long(1E6)
 
 
 # Assign points to polygons
-system.time(x <- assign_points_to_polygons(geojson_file, d$lat, d$lon))
+system.time(x <- assign_points_to_polygons(geojson_file, d$lat, d$lon, property_name = "SA2_NAME21"), gcFirst = F)
 
 # Print results
-print(polygon_indices)
+print(x)
 
 
 # install.packages("sf")

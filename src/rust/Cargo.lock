@@ -496,6 +496,8 @@ dependencies = [
  "geojson",
  "rayon",
  "regex",
+ "rstar",
+ "serde_json",
  "text_distance",
  "walkdir",
 ]

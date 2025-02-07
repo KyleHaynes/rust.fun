@@ -234,16 +234,26 @@ use geo::{point, Polygon, MultiPolygon, Contains}; // Import the Contains trait
 use geojson::{FeatureCollection, GeoJson};
 use rayon::prelude::*;
 use std::fs;
+use serde_json::Value; // Import serde_json::Value for JSON value handling
 
 /// Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
+/// Returns the value of the specified property (e.g., "SA2_NAME21") for the matching polygon.
 #[extendr]
-fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -> extendr_api::Result<Vec<i32>> {
+fn assign_points_to_polygons(
+    geojson_path: &str,
+    lat: Vec<f64>,
+    lon: Vec<f64>,
+    property_name: Option<&str>, // Optional property name to return
+) -> extendr_api::Result<Vec<String>> {
     // Input validation
     if lat.len() != lon.len() {
         return Err(extendr_api::Error::Other(
             "Latitude and longitude vectors must be of the same length.".to_string(),
         ));
     }
+
+    // Default property name to return
+    let property_name = property_name.unwrap_or("SA2_NAME21");
 
     // Step 1: Read GeoJSON file
     let geojson_str = fs::read_to_string(geojson_path).map_err(|e| {
@@ -253,17 +263,34 @@ fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -
         extendr_api::Error::Other(format!("Invalid GeoJSON: {}", e))
     })?;
 
-    // Step 2: Extract polygons from the GeoJSON
-    let polygons: Vec<Polygon<f64>> = match geojson {
+    // Step 2: Extract polygons and properties from the GeoJSON
+    let polygons_and_properties: Vec<(Polygon<f64>, Option<String>)> = match geojson {
         GeoJson::FeatureCollection(FeatureCollection { features, .. }) => {
             features
                 .iter()
-                .filter_map(|feature| feature.geometry.as_ref())
-                .filter_map(|geometry| geo::Geometry::try_from(geometry).ok())
-                .filter_map(|geometry| match geometry {
-                    geo::Geometry::Polygon(p) => Some(vec![p]),  // Wrap individual Polygon in a Vec
-                    geo::Geometry::MultiPolygon(mp) => Some(mp.0),  // Extract all Polygons from MultiPolygon
-                    _ => None,
+                .filter_map(|feature| {
+                    // Extract geometry
+                    let geometry = feature.geometry.as_ref()?;
+                    let geo_geometry = geo::Geometry::try_from(geometry).ok()?;
+
+                    // Extract property value
+                    let property_value = feature
+                        .property(property_name)
+                        .and_then(|value| match value {
+                            Value::String(s) => Some(s.clone()), // Use serde_json::Value::String
+                            _ => None,
+                        });
+
+                    // Handle Polygon and MultiPolygon geometries
+                    match geo_geometry {
+                        geo::Geometry::Polygon(p) => Some(vec![(p, property_value)]),
+                        geo::Geometry::MultiPolygon(mp) => Some(
+                            mp.0.into_iter()
+                                .map(|p| (p, property_value.clone()))
+                                .collect(),
+                        ),
+                        _ => None,
+                    }
                 })
                 .flatten()
                 .collect()
@@ -275,23 +302,28 @@ fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -
         }
     };
 
+    eprintln!("Extracted {} polygons from GeoJSON.", polygons_and_properties.len());
+
     // Step 3: Use Rayon for parallel processing of points
-    let result: Vec<i32> = lat
+    let result: Vec<String> = lat
         .into_par_iter()
         .zip(lon.into_par_iter())
         .map(|(latitude, longitude)| {
             let pt = point!(x: longitude, y: latitude); // GeoJSON uses (lon, lat)
-            polygons
+            // eprintln!("Processing point: ({}, {})", pt.x(), pt.y());
+
+            // Find the first polygon that contains the point
+            polygons_and_properties
                 .iter()
-                .enumerate()
-                .find(|(_, poly)| poly.contains(&pt)) // Now this works because `Contains` is in scope
-                .map(|(index, _)| index as i32) // Return polygon index
-                .unwrap_or(-1) // -1 if no match found
+                .find(|(polygon, _)| polygon.contains(&pt))
+                .and_then(|(_, property_value)| property_value.as_ref().map(|v| v.clone()))
+                .unwrap_or_else(|| "Unknown".to_string()) // Default value if no match or no property
         })
         .collect();
 
     Ok(result)
 }
+
 extendr_module! {
     mod rust_fun;
     fn hello_world;
