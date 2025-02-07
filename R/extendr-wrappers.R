@@ -41,7 +41,7 @@ obj_memory_size <- function(obj) .Call(wrap__obj_memory_size, obj)
 
 obj_size <- function(obj) .Call(wrap__obj_size, obj)
 
-#' Load a GeoJSON file and find which polygon each lat-long point falls into.
+#' Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
 assign_points_to_polygons <- function(geojson_path, lat, lon) .Call(wrap__assign_points_to_polygons, geojson_path, lat, lon)
 
 

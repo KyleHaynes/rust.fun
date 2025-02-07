@@ -230,45 +230,68 @@ fn obj_memory_size(obj: Robj) -> Robj {
     R!("object.size(obj)", obj).unwrap()
 }
 use extendr_api::prelude::*;
-use geo::{point, prelude::*, Polygon, MultiPolygon};
+use geo::{point, Polygon, MultiPolygon, Contains}; // Import the Contains trait
 use geojson::{FeatureCollection, GeoJson};
-use rayon::prelude::*; // For parallel iteration
+use rayon::prelude::*;
 use std::fs;
 
-/// Load a GeoJSON file and find which polygon each lat-long point falls into.
+/// Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
 #[extendr]
-fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -> Vec<i32> {
+fn assign_points_to_polygons(geojson_path: &str, lat: Vec<f64>, lon: Vec<f64>) -> extendr_api::Result<Vec<i32>> {
+    // Input validation
+    if lat.len() != lon.len() {
+        return Err(extendr_api::Error::Other(
+            "Latitude and longitude vectors must be of the same length.".to_string(),
+        ));
+    }
+
     // Step 1: Read GeoJSON file
-    let geojson_str = std::fs::read_to_string(geojson_path).expect("Failed to read file");
-    let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
+    let geojson_str = fs::read_to_string(geojson_path).map_err(|e| {
+        extendr_api::Error::Other(format!("Failed to read file: {}", e))
+    })?;
+    let geojson: GeoJson = geojson_str.parse().map_err(|e| {
+        extendr_api::Error::Other(format!("Invalid GeoJSON: {}", e))
+    })?;
 
     // Step 2: Extract polygons from the GeoJSON
-    let polygons: Vec<Polygon<f64>> = if let GeoJson::FeatureCollection(FeatureCollection { features, .. }) = geojson {
-        features
-            .iter()
-            .filter_map(|feature| feature.geometry.as_ref())
-            .filter_map(|geometry| geo::Geometry::try_from(geometry).ok())
-            .flat_map(|geometry| match geometry {
-                geo::Geometry::Polygon(p) => Some(vec![p]), // Single Polygon
-                geo::Geometry::MultiPolygon(mp) => Some(mp.0), // Flatten MultiPolygon
-                _ => None,
-            })
-            .flatten()
-            .collect()
-    } else {
-        panic!("Invalid GeoJSON format");
+    let polygons: Vec<Polygon<f64>> = match geojson {
+        GeoJson::FeatureCollection(FeatureCollection { features, .. }) => {
+            features
+                .iter()
+                .filter_map(|feature| feature.geometry.as_ref())
+                .filter_map(|geometry| geo::Geometry::try_from(geometry).ok())
+                .filter_map(|geometry| match geometry {
+                    geo::Geometry::Polygon(p) => Some(vec![p]),  // Wrap individual Polygon in a Vec
+                    geo::Geometry::MultiPolygon(mp) => Some(mp.0),  // Extract all Polygons from MultiPolygon
+                    _ => None,
+                })
+                .flatten()
+                .collect()
+        }
+        _ => {
+            return Err(extendr_api::Error::Other(
+                "GeoJSON must be a FeatureCollection.".to_string(),
+            ))
+        }
     };
 
-    // Step 3: Check each point and find which polygon it belongs to in parallel
-    lat.into_par_iter().zip(lon.into_par_iter()).map(|(latitude, longitude)| {
-        let pt = point!(x: longitude, y: latitude); // Note: GeoJSON uses (lon, lat)
-        polygons.iter().enumerate()
-            .find(|(_, poly)| poly.contains(&pt))
-            .map(|(index, _)| index as i32)  // Return polygon index
-            .unwrap_or(-1) // -1 if no match found
-    }).collect()
-}
+    // Step 3: Use Rayon for parallel processing of points
+    let result: Vec<i32> = lat
+        .into_par_iter()
+        .zip(lon.into_par_iter())
+        .map(|(latitude, longitude)| {
+            let pt = point!(x: longitude, y: latitude); // GeoJSON uses (lon, lat)
+            polygons
+                .iter()
+                .enumerate()
+                .find(|(_, poly)| poly.contains(&pt)) // Now this works because `Contains` is in scope
+                .map(|(index, _)| index as i32) // Return polygon index
+                .unwrap_or(-1) // -1 if no match found
+        })
+        .collect();
 
+    Ok(result)
+}
 extendr_module! {
     mod rust_fun;
     fn hello_world;

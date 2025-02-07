@@ -2,10 +2,10 @@
 % Please edit documentation in R/extendr-wrappers.R
 \name{assign_points_to_polygons}
 \alias{assign_points_to_polygons}
-\title{Load a GeoJSON file and find which polygon each lat-long point falls into.}
+\title{Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.}
 \usage{
 assign_points_to_polygons(geojson_path, lat, lon)
 }
 \description{
-Load a GeoJSON file and find which polygon each lat-long point falls into.
+Load a GeoJSON file and find which polygon each lat-long point falls into, using Rayon for parallelism.
 }
