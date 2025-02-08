@@ -15,7 +15,7 @@ use walkdir::{WalkDir, DirEntry};
 use std::fs::Metadata;
 use std::io;
 
-use geo::{point, Polygon, MultiPolygon, Contains, BoundingRect, Geometry, Rect}; // Import the Contains trait
+use geo::{point, Point, Polygon, MultiPolygon, Contains, BoundingRect, Geometry, Rect}; // Import the Contains trait
 use geojson::{FeatureCollection, GeoJson};
 use std::fs;
 use serde_json::Value; // Import serde_json::Value for JSON value handling
@@ -322,23 +322,18 @@ fn assign_points_to_polygons(
 }
 
 
-
+// Function to generate random lat-longs inside filtered polygons
 #[extendr]
 fn generate_random_lat_longs(geojson_path: &str, n: usize, property_name: &str, pattern: &str) -> Robj {
-    // Read the GeoJSON file
     let geojson_str = fs::read_to_string(geojson_path).expect("Failed to read file");
     let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
 
     let regex = Regex::new(pattern).expect("Invalid regex pattern");
+    let mut polygons: Vec<Polygon<f64>> = Vec::new();
 
-    let mut min_lat = std::f64::MAX;
-    let mut max_lat = std::f64::MIN;
-    let mut min_lon = std::f64::MAX;
-    let mut max_lon = std::f64::MIN;
-
+    // Extract polygons that match the property filter
     if let GeoJson::FeatureCollection(FeatureCollection { features, .. }) = geojson {
         for feature in features {
-            // Check if the property exists and matches the regex pattern
             if let Some(properties) = &feature.properties {
                 if let Some(prop_value) = properties.get(property_name) {
                     if let Some(prop_str) = prop_value.as_str() {
@@ -349,23 +344,48 @@ fn generate_random_lat_longs(geojson_path: &str, n: usize, property_name: &str, 
                 }
             }
 
-            // Extract bounding box
+            // Convert geometry to polygons
             if let Some(geometry) = feature.geometry {
                 if let Ok(geo) = Geometry::try_from(&geometry) {
-                    if let Some(bbox) = geo.bounding_rect() {
-                        min_lat = min_lat.min(bbox.min().y);
-                        max_lat = max_lat.max(bbox.max().y);
-                        min_lon = min_lon.min(bbox.min().x);
-                        max_lon = max_lon.max(bbox.max().x);
+                    match geo {
+                        Geometry::Polygon(poly) => polygons.push(poly),
+                        Geometry::MultiPolygon(mp) => polygons.extend(mp.0),
+                        _ => continue, // Ignore other geometries
                     }
                 }
             }
         }
     }
 
+    if polygons.is_empty() {
+        panic!("No matching polygons found.");
+    }
+
+    // Generate points inside polygons
     let mut rng = rand::thread_rng();
-    let latitudes: Vec<f64> = (0..n).map(|_| rng.gen_range(min_lat..max_lat)).collect();
-    let longitudes: Vec<f64> = (0..n).map(|_| rng.gen_range(min_lon..max_lon)).collect();
+    let mut latitudes = Vec::new();
+    let mut longitudes = Vec::new();
+    let max_attempts = 1000; // Avoid infinite loops
+
+    while latitudes.len() < n {
+        for _ in 0..max_attempts {
+            let polygon = &polygons[rng.gen_range(0..polygons.len())]; // Pick a random polygon
+            let bbox = polygon.bounding_rect().unwrap();
+            let x = rng.gen_range(bbox.min().x..bbox.max().x);
+            let y = rng.gen_range(bbox.min().y..bbox.max().y);
+            let point = Point::new(x, y);
+
+            if polygon.contains(&point) {
+                latitudes.push(y);
+                longitudes.push(x);
+                break; // Move to the next point
+            }
+        }
+
+        if latitudes.len() >= n {
+            break;
+        }
+    }
 
     // Return as an R list
     list!(

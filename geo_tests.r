@@ -82,9 +82,11 @@ st_write(nc, "qld.geojson")
 # ---- Sample random lat longs in a geojson file ----
 system.time({in_qld <- generate_random_lat_longs(
     geojson_file,
-    n = 1E3,
-    property_name = "SA2_CODE21", 
-    pattern = "^3")},
+    n = 5E3,
+    # property_name = "SA2_CODE21", 
+    property_name = "SA2_NAME21", 
+    pattern = "Brisbane|orth|outh|est")},
+    # pattern = "^3")},
 gcFirst = F)
 
 # install.packages("leaflet")
@@ -93,7 +95,7 @@ library(leaflet)
 leaflet(in_qld) %>%
   addTiles() %>%  # Add the default OpenStreetMap tiles
   addCircleMarkers(
-    in_qld$lon, in_qld$lat,
+    ~lon, ~lat,
     color = "red",
     radius = 5,
     fillOpacity = 0.8,
@@ -103,3 +105,13 @@ leaflet(in_qld) %>%
 
 system.time(x <- assign_points_to_polygons(geojson_file, in_qld$lat, in_qld$lon, property_name = "SA2_NAME21"), gcFirst = F)
 # Extracted 1680 polygons from GeoJSON.
+
+
+# ---- Compile and Zip -----
+# NOTE: From a fresh R session ...
+path <- devtools::build(binary = TRUE)
+file.copy(path, ".")
+
+install.packages("rust.fun_0.0.0.9000.zip", repos = NULL)
+require(rust.fun)
+rust.fun:::assign_points_to_polygons
