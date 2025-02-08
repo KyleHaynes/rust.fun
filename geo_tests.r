@@ -73,16 +73,15 @@ st_write(nc, "meuse.geojson")
 
 # and qld
 require(data.table)
-nc[nc$SA2_NAME21 %plike% "Beaudes", ]
 nc <- nc[nc$SA4_CODE21 %plike% "^3", ]
 meuse_sf = st_as_sf(nc, coords = c("x", "y"), crs = 28992, agr = "constant")
 st_write(nc, "qld.geojson")
 
 
 # ---- Sample random lat longs in a geojson file ----
-system.time({in_qld <- generate_random_lat_longs(
+system.time({in_qld <- rust.fun:::generate_random_lat_longs(
     geojson_file,
-    n = 5E3,
+    n = 5E6,
     # property_name = "SA2_CODE21", 
     property_name = "SA2_NAME21", 
     pattern = "Brisbane|orth|outh|est")},
@@ -90,7 +89,9 @@ system.time({in_qld <- generate_random_lat_longs(
 gcFirst = F)
 
 # install.packages("leaflet")
+# install.packages("leaflet.extras")
 library(leaflet)
+library(leaflet.extras)
 
 leaflet(in_qld) %>%
   addTiles() %>%  # Add the default OpenStreetMap tiles
@@ -101,6 +102,17 @@ leaflet(in_qld) %>%
     fillOpacity = 0.8,
     popup = ~paste("Lat:", lat, "<br>Lon:", lon)  # Show lat/lon on click
   )
+
+# Create a leaflet map with a heatmap layer
+leaflet(in_qld) %>%
+  addTiles() %>%  # Add base map tiles
+  addHeatmap(
+    lng = ~lon,  # Longitude column
+    lat = ~lat,  # Latitude column
+    blur = 20,   # Blur intensity (higher values create smoother heatmaps)
+    radius = 15, # Radius of each point
+    max = 0.5    # Maximum intensity of the heatmap
+)
 
 
 system.time(x <- assign_points_to_polygons(geojson_file, in_qld$lat, in_qld$lon, property_name = "SA2_NAME21"), gcFirst = F)
@@ -115,3 +127,8 @@ file.copy(path, ".")
 install.packages("rust.fun_0.0.0.9000.zip", repos = NULL)
 require(rust.fun)
 rust.fun:::assign_points_to_polygons
+
+
+
+# ---- Return property names from GeoJSON file ----
+get_property_names(geojson_file)

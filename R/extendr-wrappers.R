@@ -43,5 +43,8 @@ assign_points_to_polygons <- function(geojson_path, lat, lon, property_name) .Ca
 
 generate_random_lat_longs <- function(geojson_path, n, property_name, pattern) .Call(wrap__generate_random_lat_longs, geojson_path, n, property_name, pattern)
 
+#' Extract property names from a GeoJSON file.
+get_property_names <- function(geojson_path) .Call(wrap__get_property_names, geojson_path)
+
 
 # nolint end

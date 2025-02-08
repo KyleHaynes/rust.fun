@@ -21,7 +21,7 @@ use std::fs;
 use serde_json::Value; // Import serde_json::Value for JSON value handling
 
 use rand::Rng;
-
+use std::collections::HashSet;
 
 
 /// @export
@@ -327,7 +327,6 @@ fn assign_points_to_polygons(
 fn generate_random_lat_longs(geojson_path: &str, n: usize, property_name: &str, pattern: &str) -> Robj {
     let geojson_str = fs::read_to_string(geojson_path).expect("Failed to read file");
     let geojson: GeoJson = geojson_str.parse().expect("Invalid GeoJSON");
-
     let regex = Regex::new(pattern).expect("Invalid regex pattern");
     let mut polygons: Vec<Polygon<f64>> = Vec::new();
 
@@ -396,6 +395,47 @@ fn generate_random_lat_longs(geojson_path: &str, n: usize, property_name: &str, 
 }
 
 
+
+
+/// Extract property names from a GeoJSON file.
+#[extendr]
+fn get_property_names(geojson_path: &str) -> extendr_api::Result<Vec<String>> {
+    // Step 1: Read the GeoJSON file
+    let geojson_str = fs::read_to_string(geojson_path).map_err(|e| {
+        extendr_api::Error::Other(format!("Failed to read GeoJSON file: {}", e))
+    })?;
+
+    // Step 2: Parse the GeoJSON
+    let geojson: GeoJson = geojson_str.parse().map_err(|e| {
+        extendr_api::Error::Other(format!("Failed to parse GeoJSON: {}", e))
+    })?;
+
+    // Step 3: Extract property names
+    let mut property_names = HashSet::new();
+    match geojson {
+        GeoJson::FeatureCollection(FeatureCollection { features, .. }) => {
+            for feature in features {
+                if let Some(properties) = &feature.properties {
+                    for key in properties.keys() {
+                        property_names.insert(key.clone());
+                    }
+                }
+            }
+        }
+        _ => {
+            return Err(extendr_api::Error::Other(
+                "GeoJSON must be a FeatureCollection.".to_string(),
+            ))
+        }
+    }
+
+    // Step 4: Return the property names as a sorted vector
+    let mut property_names: Vec<String> = property_names.into_iter().collect();
+    property_names.sort();
+    Ok(property_names)
+}
+
+
 extendr_module! {
     mod rust_fun;
     fn standardise_strings;
@@ -411,5 +451,6 @@ extendr_module! {
     fn obj_size;
     fn assign_points_to_polygons;
     fn generate_random_lat_longs;
+    fn get_property_names;
     // fn compute_ratcliff_obershelp_distance;
 }
